@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>EaSy LiFe Studio v3.5</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        google: {
+                            blue: '#1a73e8',
+                            hoverBlue: '#1557b0',
+                            red: '#ea4335',
+                            yellow: '#fbbc04',
+                            green: '#34a853',
+                            gray: '#f1f3f4',
+                            darkBg: '#121316',
+                            darkCard: '#1e1f23',
+                            darkBorder: '#2d2f36'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sab: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            padding-top: var(--sat);
+            padding-bottom: var(--sab);
+        }
+
+        #theme-dissolve-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: #121316;
+        }
+
+        *, *::before, *::after {
+            transition: background-color 0.35s ease, border-color 0.35s ease, color 0.2s ease;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 4px; }
+
+        .pulse-subtle { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
+
+        @keyframes alarmFlash {
+            0%, 100% { background-color: rgba(234, 67, 53, 0.96); }
+            50% { background-color: rgba(26, 115, 232, 0.96); }
+        }
+        .alarm-overlay-active {
+            animation: alarmFlash 1.1s infinite;
+        }
+
+        button, .interactive-btn, .month-day-cell, .badge-item {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease !important;
+            will-change: transform;
+        }
+        button:hover, .interactive-btn:hover {
+            transform: scale(1.04);
+        }
+        button:active, .interactive-btn:active {
+            transform: scale(0.95) !important;
+        }
+
+        .month-day-cell:hover {
+            transform: scale(1.02);
+            z-index: 10;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge-item:hover {
+            transform: scale(1.04);
+        }
+
+        .priority-high { border-left: 4px solid #ea4335 !important; }
+        .priority-med { border-left: 4px solid #1a73e8 !important; }
+        .priority-low { border-left: 4px solid #34a853 !important; }
+
+        .badge-high { background-color: rgba(234, 67, 53, 0.15); color: #ea4335; }
+        .badge-med { background-color: rgba(26, 115, 232, 0.15); color: #1a73e8; }
+        .badge-low { background-color: rgba(52, 168, 83, 0.15); color: #34a853; }
+
+        .mac-modal-container {
+            transition: backdrop-filter 0.35s ease, opacity 0.35s ease;
+        }
+        
+        .mac-modal-box {
+            transform-origin: center bottom;
+            transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease, filter 0.3s ease;
+        }
+
+        .mac-modal-closed {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.85) translateY(40px);
+            filter: blur(8px);
+        }
+
+        .mac-modal-open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+            filter: blur(0px);
+        }
+
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            background: rgba(18, 19, 22, 0.88);
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-google-darkBg text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300 pb-16 md:pb-0 select-none">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="p-6 bg-white dark:bg-google-darkCard rounded-3xl shadow-2xl border border-slate-200 dark:border-google-darkBorder flex flex-col items-center space-y-4 max-w-xs w-full mx-4 text-center">
+            <div class="w-20 h-20 bg-google-blue/10 dark:bg-google-blue/20 rounded-3xl flex items-center justify-center p-3 shadow-xl animate-bounce">
+                <svg viewBox="0 0 500 500" class="w-full h-full text-google-blue dark:text-white fill-current">
+                    <path d="M250 80C161.634 80 90 151.634 90 240C90 328.366 161.634 400 250 400C338.366 400 410 328.366 410 240C410 223.431 396.569 210 380 210C363.431 210 350 223.431 350 240C350 295.228 305.228 340 250 340C194.772 340 150 295.228 150 240C150 184.772 194.772 140 250 140C266.569 140 280 126.569 280 110C280 93.4315 266.569 80 250 80Z"/>
+                    <circle cx="250" cy="110" r="22"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">EaSy LiFe</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Schedule, Alarm & Sleep Studio</p>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="splash-progress" class="bg-google-blue h-full w-0 transition-all duration-300"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Name Modal -->
+    <div id="setup-name-modal" class="mac-modal-container fixed inset-0 z-[90000] mac-modal-closed bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="mac-modal-box bg-white dark:bg-google-darkCard rounded-3xl w-full max-w-sm p-6 space-y-4 border border-slate-200 dark:border-google-darkBorder shadow-2xl text-center">
+            <div class="w-16 h-16 bg-google-blue/15 text-google-blue rounded-2xl flex items-center justify-center mx-auto p-2">
+                <svg viewBox="0 0 500 500" class="w-10 h-10 fill-current">
+                    <path d="M250 80C161.634 80 90 151.634 90 240C90 328.366 161.634 400 250 400C338.366 400 410 328.366 410 240C410 223.431 396.569 210 380 210C363.431 210 350 223.431 350 240C350 295.228 305.228 340 250 340C194.772 340 150 295.228 150 240C150 184.772 194.772 140 250 140C266.569 140 280 126.569 280 110C280 93.4315 266.569 80 250 80Z"/>
+                    <circle cx="250" cy="110" r="22"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-black text-slate-900 dark:text-white">Welcome to EaSy LiFe!</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Please enter your name to personalize your studio workspace:</p>
+            </div>
+            <input type="text" id="setup-user-name-input" placeholder="Your Name..." class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-bold text-center focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+            <button onclick="saveUserNameAndStart()" class="w-full py-3 bg-google-blue hover:bg-google-hoverBlue text-white text-xs font-black rounded-xl shadow-lg transition">Start Using EaSy LiFe</button>
+        </div>
+    </div>
+
+    <div id="theme-dissolve-overlay"></div>
+
+    <!-- Active Alarm Ringing Overlay -->
+    <div id="app-alarm-overlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center p-6 text-white text-center alarm-overlay-active backdrop-blur-md">
+        <div class="p-4 bg-white/20 rounded-full mb-3 animate-bounce shadow-2xl">
+            <i data-lucide="bell-ring" class="w-14 h-14 text-amber-300"></i>
+        </div>
+        <h2 id="alarm-overlay-title" class="text-2xl sm:text-3xl font-black mb-1">Alarm Triggered!</h2>
+        <p id="alarm-overlay-time" class="text-base sm:text-lg font-mono opacity-90 mb-5">00:00 AM</p>
+
+        <div id="alarm-challenge-box" class="bg-slate-900/90 text-white p-5 rounded-2xl max-w-sm w-full shadow-2xl border border-white/20 mb-5">
+            <p class="text-xs text-slate-300 mb-2 font-medium">Wake-up Math Challenge to Dismiss:</p>
+            <div id="alarm-math-question" class="text-xl font-bold font-mono text-amber-400 mb-3">5 + 7 = ?</div>
+            <input type="number" id="alarm-math-answer" placeholder="Your Answer" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold text-white focus:outline-none focus:border-google-blue mb-3">
+            <button onclick="verifyAlarmMath()" class="w-full py-3 bg-google-blue hover:bg-google-hoverBlue text-white rounded-xl text-xs font-black shadow-lg">Verify & Stop Alarm</button>
+        </div>
+
+        <button onclick="snoozeCurrentAlarm()" class="px-6 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition">Snooze (5 mins)</button>
+    </div>
+
+    <!-- Main Outer Container -->
+    <div class="flex flex-col md:flex-row flex-1 h-full overflow-hidden">
+        
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside class="hidden md:flex flex-col w-64 bg-white dark:bg-google-darkCard border-r border-slate-200 dark:border-google-darkBorder p-5 justify-between shrink-0">
+            <div class="space-y-6">
+                <div class="flex items-center space-x-3 px-2">
+                    <div class="w-10 h-10 bg-google-blue/10 dark:bg-google-blue/20 rounded-xl flex items-center justify-center p-1.5 shadow-md">
+                        <svg viewBox="0 0 500 500" class="w-full h-full text-google-blue dark:text-white fill-current">
+                            <path d="M250 80C161.634 80 90 151.634 90 240C90 328.366 161.634 400 250 400C338.366 400 410 328.366 410 240C410 223.431 396.569 210 380 210C363.431 210 350 223.431 350 240C350 295.228 305.228 340 250 340C194.772 140 150 295.228 150 240C150 184.772 194.772 140 250 140C266.569 140 280 126.569 280 110C280 93.4315 266.569 80 250 80Z"/>
+                            <circle cx="250" cy="110" r="22"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="font-black text-sm tracking-tight text-slate-900 dark:text-white">EaSy LiFe</h2>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Studio v3.5</p>
+                    </div>
+                </div>
+
+                <nav class="space-y-1.5">
+                    <button onclick="switchTab('studio')" id="nav-btn-studio" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold bg-google-blue text-white shadow-lg shadow-google-blue/30 transition">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Studio Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('calendar')" id="nav-btn-calendar" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        <span>Month Calendar</span>
+                    </button>
+                    <button onclick="switchTab('sleep')" id="nav-btn-sleep" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                        <i data-lucide="moon" class="w-4 h-4"></i>
+                        <span>Sleep Lab <span class="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-mono font-bold">BETA</span></span>
+                    </button>
+                    <button onclick="switchTab('water')" id="nav-btn-water" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                        <i data-lucide="droplet" class="w-4 h-4"></i>
+                        <span>Water Tracker</span>
+                    </button>
+                    <button onclick="switchTab('analytics')" id="nav-btn-analytics" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                        <span>Analytics</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="space-y-4 pt-4 border-t border-slate-200 dark:border-google-darkBorder">
+                <div class="bg-slate-50 dark:bg-google-darkBg p-3 rounded-2xl border border-slate-200 dark:border-google-darkBorder">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Quick Sound Test</span>
+                        <span id="sidebar-live-clock" class="text-[10px] font-mono font-bold text-google-blue">12:00 PM</span>
+                    </div>
+                    <button onclick="playTestAudio()" class="w-full py-2 bg-google-blue/10 hover:bg-google-blue/20 text-google-blue text-[11px] font-bold rounded-xl transition flex items-center justify-center space-x-1.5">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                        <span>Test Alarm Sound</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-600 dark:text-slate-400">Dark Mode</span>
+                    <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:scale-105 transition">
+                        <i data-lucide="moon" id="dark-mode-icon" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-google-darkBg">
+            
+            <!-- Top Header Navbar -->
+            <header class="h-16 bg-white dark:bg-google-darkCard border-b border-slate-200 dark:border-google-darkBorder px-6 flex items-center justify-between z-10 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 md:hidden bg-google-blue/10 rounded-lg flex items-center justify-center p-1">
+                        <svg viewBox="0 0 500 500" class="w-full h-full text-google-blue dark:text-white fill-current">
+                            <path d="M250 80C161.634 80 90 151.634 90 240C90 328.366 161.634 400 250 400C338.366 400 410 328.366 410 240C410 223.431 396.569 210 380 210C363.431 210 350 223.431 350 240C350 295.228 305.228 340 250 340C194.772 340 150 295.228 150 240C150 184.772 194.772 140 250 140C266.569 140 280 126.569 280 110C280 93.4315 266.569 80 250 80Z"/>
+                            <circle cx="250" cy="110" r="22"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 id="header-user-title" class="text-base font-black text-slate-900 dark:text-white tracking-tight">My Studio Workspace</h1>
+                        <p id="header-live-date" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Loading Date...</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button onclick="openAddEventModal()" class="flex items-center space-x-2 px-4 py-2.5 bg-google-blue hover:bg-google-hoverBlue text-white rounded-xl text-xs font-black shadow-lg shadow-google-blue/25 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>New Task / Alarm</span>
+                    </button>
+                    <button onclick="toggleDarkMode()" class="p-2.5 md:hidden rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <i data-lucide="moon" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Tab Views Container -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                
+                <!-- Tab: Studio Dashboard -->
+                <div id="tab-content-studio" class="space-y-6">
+                    
+                    <!-- Top Metrics Banner -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-4 bg-white dark:bg-google-darkCard rounded-2xl border border-slate-200 dark:border-google-darkBorder shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Total Tasks</span>
+                                <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                                    <i data-lucide="check-square" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="metric-total-tasks" class="text-2xl font-black text-slate-900 dark:text-white">0</div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Scheduled items</span>
+                        </div>
+
+                        <div class="p-4 bg-white dark:bg-google-darkCard rounded-2xl border border-slate-200 dark:border-google-darkBorder shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Active Alarms</span>
+                                <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                                    <i data-lucide="bell" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="metric-active-alarms" class="text-2xl font-black text-slate-900 dark:text-white">0</div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Ringing enabled</span>
+                        </div>
+
+                        <div class="p-4 bg-white dark:bg-google-darkCard rounded-2xl border border-slate-200 dark:border-google-darkBorder shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Water Logged</span>
+                                <div class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
+                                    <i data-lucide="droplet" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="metric-water-cups" class="text-2xl font-black text-slate-900 dark:text-white">0 / 8</div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Cups today</span>
+                        </div>
+
+                        <div class="p-4 bg-white dark:bg-google-darkCard rounded-2xl border border-slate-200 dark:border-google-darkBorder shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Sleep Target</span>
+                                <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+                                    <i data-lucide="moon" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div id="metric-sleep-score" class="text-2xl font-black text-slate-900 dark:text-white">7.5h</div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Recommended rest</span>
+                        </div>
+                    </div>
+
+                    <!-- Today's Assignments & Quick Schedule Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Today's Assignments Widget -->
+                        <div class="lg:col-span-2 bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="text-base font-black text-slate-900 dark:text-white">Today's Assignments & Tasks</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">Your scheduled events and high-priority alarms for today</p>
+                                    </div>
+                                    <span id="todays-badge-count" class="px-2.5 py-1 rounded-full text-xs font-bold bg-google-blue/15 text-google-blue">0 items</span>
+                                </div>
+
+                                <div id="todays-task-list" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                    <div class="p-6 text-center text-slate-400 dark:text-slate-500 text-xs">
+                                        No tasks scheduled for today. Click "New Task / Alarm" above to add one!
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                                <span id="todays-completion-stats">Completed 0 of 0 tasks</span>
+                                <div class="w-32 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div id="todays-progress-bar" class="bg-google-green h-full w-0 transition-all duration-500"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Categories Filter & Management -->
+                        <div class="bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm space-y-4 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-sm font-black text-slate-900 dark:text-white mb-1">Custom Categories</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Organize tasks into your workspace tags</p>
+                                <div class="flex space-x-2 mb-3">
+                                    <input type="text" id="new-category-input" placeholder="New Category Name..." class="flex-1 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-medium focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+                                    <button onclick="addNewCategory()" class="px-4 py-2.5 bg-google-blue text-white rounded-xl text-xs font-bold hover:bg-google-hoverBlue transition">Add</button>
+                                </div>
+                                <div id="category-pills-container" class="flex flex-wrap gap-2 pt-1">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-slate-50 dark:bg-google-darkBg rounded-2xl border border-slate-200 dark:border-google-darkBorder mt-4">
+                                <span class="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Pro Tip:</span>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400">Click any date in the Calendar tab to instantly create an alarm or task for that specific day!</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Tab: Calendar -->
+                <div id="tab-content-calendar" class="space-y-6 hidden">
+                    <div class="bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center space-x-3">
+                                <h2 id="calendar-month-year-title" class="text-xl font-black text-slate-900 dark:text-white">Month Year</h2>
+                                <div class="flex space-x-1">
+                                    <button onclick="changeMonth(-1)" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                    <button onclick="changeMonth(1)" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                            <button onclick="jumpToCurrentMonth()" class="px-3.5 py-2 bg-google-blue/10 hover:bg-google-blue/20 text-google-blue rounded-xl text-xs font-bold transition">Today</button>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400">
+                            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                        </div>
+                        <div id="month-grid-container" class="grid grid-cols-7 gap-2">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Sleep Lab -->
+                <div id="tab-content-sleep" class="space-y-6 hidden">
+                    <div class="bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="text-lg font-black text-slate-900 dark:text-white">Sleep Lab</h3>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-500 font-bold">BETA</span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Calculate optimal 90-minute sleep cycles and track your nocturnal rest.</p>
+                            </div>
+                            <button onclick="calculateSleepCycles()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black shadow-lg transition">Calculate Cycles</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-google-darkBg border border-slate-200 dark:border-google-darkBorder space-y-4">
+                                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300">If you want to wake up at:</h4>
+                                <input type="time" id="sleep-target-wakeup" value="07:00" class="w-full p-3 rounded-xl bg-white dark:bg-google-darkCard border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                                <div id="sleep-cycles-results" class="space-y-2 pt-2 text-xs text-slate-600 dark:text-slate-400">
+                                    Click calculate to view optimal bedtimes based on 5 & 6 sleep cycles.
+                                </div>
+                            </div>
+
+                            <div class="p-5 rounded-2xl bg-slate-50 dark:bg-google-darkBg border border-slate-200 dark:border-google-darkBorder flex flex-col justify-between">
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Hypnogram & Sleep Quality</h4>
+                                    <div class="h-36 flex items-end justify-between space-x-1 pt-4">
+                                        <div class="w-1/6 bg-purple-500/40 h-[40%] rounded-t-lg"></div>
+                                        <div class="w-1/6 bg-purple-500/70 h-[80%] rounded-t-lg"></div>
+                                        <div class="w-1/6 bg-purple-500 h-[95%] rounded-t-lg"></div>
+                                        <div class="w-1/6 bg-purple-500/50 h-[50%] rounded-t-lg"></div>
+                                        <div class="w-1/6 bg-purple-500/80 h-[85%] rounded-t-lg"></div>
+                                        <div class="w-1/6 bg-purple-500/30 h-[30%] rounded-t-lg"></div>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-slate-400 text-center mt-2 block">Estimated Deep Sleep Stage Distribution</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Water Tracker -->
+                <div id="tab-content-water" class="space-y-6 hidden">
+                    <div class="bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm space-y-6 text-center">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900 dark:text-white">Daily Water Hydration Tracker</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Tap glasses to log your daily water intake (Target: 8 cups)</p>
+                        </div>
+                        
+                        <div id="water-glasses-grid" class="flex flex-wrap justify-center gap-4 max-w-md mx-auto py-4">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <div>
+                            <button onclick="resetWaterTracker()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 transition">Reset Today's Water</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Analytics -->
+                <div id="tab-content-analytics" class="space-y-6 hidden">
+                    <div class="bg-white dark:bg-google-darkCard rounded-3xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-sm space-y-4">
+                        <h3 class="text-lg font-black text-slate-900 dark:text-white">Productivity & Alarm Analytics</h3>
+                        <div class="h-64 flex items-center justify-center bg-slate-50 dark:bg-google-darkBg rounded-2xl border border-slate-200 dark:border-google-darkBorder p-2">
+                            <canvas id="analyticsChart" class="max-h-56 w-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Bottom Mobile Navigation Bar -->
+            <nav class="md:hidden h-16 bg-white dark:bg-google-darkCard border-t border-slate-200 dark:border-google-darkBorder flex items-center justify-around px-2 z-20 shrink-0">
+                <button onclick="switchTab('studio')" id="mobile-nav-studio" class="flex flex-col items-center justify-center space-y-1 text-google-blue">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-bold">Studio</span>
+                </button>
+                <button onclick="switchTab('calendar')" id="mobile-nav-calendar" class="flex flex-col items-center justify-center space-y-1 text-slate-400">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-bold">Calendar</span>
+                </button>
+                <button onclick="switchTab('sleep')" id="mobile-nav-sleep" class="flex flex-col items-center justify-center space-y-1 text-slate-400">
+                    <i data-lucide="moon" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-bold">Sleep</span>
+                </button>
+                <button onclick="switchTab('water')" id="mobile-nav-water" class="flex flex-col items-center justify-center space-y-1 text-slate-400">
+                    <i data-lucide="droplet" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-bold">Water</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="mobile-nav-analytics" class="flex flex-col items-center justify-center space-y-1 text-slate-400">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                    <span class="text-[10px] font-bold">Analytics</span>
+                </button>
+            </nav>
+
+        </main>
+    </div>
+
+    <!-- Create/Edit Task Modal -->
+    <div id="task-modal-overlay" class="mac-modal-container fixed inset-0 z-40 mac-modal-closed bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="mac-modal-box bg-white dark:bg-google-darkCard rounded-3xl w-full max-w-md p-6 space-y-5 border border-slate-200 dark:border-google-darkBorder shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <h3 id="modal-task-title" class="text-base font-black text-slate-900 dark:text-white">New Task & Alarm</h3>
+                <button onclick="closeTaskModal()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:scale-105 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <input type="hidden" id="modal-task-id" value="">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Task / Alarm Title</label>
+                    <input type="text" id="modal-input-title" placeholder="e.g., Morning Workout & Wake Up..." class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Category</label>
+                        <select id="modal-input-category" class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+                            <option value="General">General</option>
+                            <option value="Work">Work</option>
+                            <option value="Study">Study</option>
+                            <option value="Health">Health</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Priority Level</label>
+                        <select id="modal-input-priority" class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+                            <option value="high">🔴 High Priority (Red)</option>
+                            <option value="med">🔵 Medium Priority (Blue)</option>
+                            <option value="low">🟢 Low Priority (Green)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Date & Time</label>
+                    <div onclick="openDateTimePicker()" class="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold flex items-center justify-between cursor-pointer hover:border-google-blue text-slate-800 dark:text-white">
+                        <span id="datetime-display-label">Select Date & Time...</span>
+                        <i data-lucide="calendar-clock" class="w-4 h-4 text-google-blue"></i>
+                    </div>
+                    <input type="hidden" id="modal-input-datetime" value="">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">Alarm Sound</label>
+                    <div class="flex space-x-2">
+                        <select id="modal-input-sound" class="flex-1 p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-google-blue text-slate-800 dark:text-white">
+                            <option value="digital">Digital Beep</option>
+                            <option value="radar">Gentle Radar</option>
+                            <option value="chime">Morning Chime</option>
+                            <option value="siren">Energetic Siren</option>
+                            <option value="custom">Custom Uploaded File</option>
+                        </select>
+                        <label class="px-4 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold flex items-center space-x-1 cursor-pointer text-slate-700 dark:text-slate-300">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                            <span>Upload</span>
+                            <input type="file" id="custom-sound-upload" accept="audio/*" class="hidden" onchange="handleCustomAudioUpload(event)">
+                        </label>
+                    </div>
+                    <audio id="custom-audio-player" class="hidden"></audio>
+                </div>
+
+                <div class="flex items-center space-x-2 pt-2">
+                    <input type="checkbox" id="modal-input-alarm-active" class="w-4 h-4 rounded text-google-blue focus:ring-google-blue cursor-pointer">
+                    <label for="modal-input-alarm-active" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Enable Alarm Ringing at Scheduled Time</label>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <button id="modal-delete-btn" onclick="confirmDeleteTaskFromModal()" class="hidden px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-black rounded-xl transition flex items-center space-x-1.5">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Delete Task</span>
+                </button>
+                <div class="flex space-x-2 ml-auto">
+                    <button onclick="closeTaskModal()" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition">Cancel</button>
+                    <button onclick="saveTaskFromModal()" class="px-5 py-2.5 bg-google-blue hover:bg-google-hoverBlue text-white rounded-xl text-xs font-black shadow-lg shadow-google-blue/30 transition">Save Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dual-Pane Date & Time Picker Modal -->
+    <div id="datetime-picker-modal" class="mac-modal-container fixed inset-0 z-50 mac-modal-closed bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="mac-modal-box bg-white dark:bg-google-darkCard rounded-3xl w-full max-w-2xl p-6 border border-slate-200 dark:border-google-darkBorder shadow-2xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-800">
+            
+            <!-- Left Pane: Calendar Date Picker -->
+            <div class="flex-1 pb-4 md:pb-0 md:pr-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h4 id="dt-picker-month-year" class="text-sm font-black text-slate-900 dark:text-white">Month Year</h4>
+                    <div class="flex space-x-1">
+                        <button onclick="dtPickerChangeMonth(-1)" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <button onclick="dtPickerChangeMonth(1)" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                    <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                </div>
+                <div id="dt-picker-days-grid" class="grid grid-cols-7 gap-1 text-xs">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Right Pane: Time Picker -->
+            <div class="flex-1 pt-4 md:pt-0 md:pl-6 space-y-5 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-black text-slate-900 dark:text-white">Select Time</h4>
+                        <div class="flex space-x-1">
+                            <button onclick="setAmPm('AM')" id="dt-ampm-am" class="px-3 py-1 rounded-lg text-xs font-bold bg-google-blue text-white">AM</button>
+                            <button onclick="setAmPm('PM')" id="dt-ampm-pm" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">PM</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-2 py-4">
+                        <input type="number" id="dt-input-hour" min="1" max="12" value="12" class="w-16 p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-center text-lg font-black border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-google-blue">
+                        <span class="text-lg font-bold text-slate-700 dark:text-slate-300">:</span>
+                        <input type="number" id="dt-input-minute" min="0" max="59" value="00" class="w-16 p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-center text-lg font-black border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-google-blue">
+                    </div>
+
+                    <div class="flex justify-center">
+                        <div class="w-36 h-36 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 relative flex items-center justify-center bg-slate-50 dark:bg-google-darkBg">
+                            <span class="text-[10px] font-bold text-slate-400">Time Selected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button onclick="closeDateTimePicker()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
+                    <button onclick="confirmDateTimePicker()" class="px-5 py-2 bg-google-blue text-white rounded-xl text-xs font-black shadow-md">OK</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="confirm-modal-overlay" class="mac-modal-container fixed inset-0 z-[60] mac-modal-closed bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="mac-modal-box bg-white dark:bg-google-darkCard rounded-3xl w-full max-w-sm p-6 space-y-4 border border-slate-200 dark:border-google-darkBorder shadow-2xl text-center">
+            <div class="w-14 h-14 bg-red-500/15 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
+                <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h3 id="confirm-modal-title" class="text-base font-black text-slate-900 dark:text-white">Are you sure?</h3>
+                <p id="confirm-modal-desc" class="text-xs text-slate-500 dark:text-slate-400 mt-1">This action cannot be undone.</p>
+            </div>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition">Cancel</button>
+                <button id="confirm-modal-action-btn" onclick="" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-black rounded-xl shadow-lg transition">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let appState = {
+            userName: localStorage.getItem('easy_life_user_name') || '',
+            darkMode: localStorage.getItem('easy_life_dark') === 'true',
+            tasks: JSON.parse(localStorage.getItem('easy_life_tasks') || '[]'),
+            categories: JSON.parse(localStorage.getItem('easy_life_categories') || '["General", "Work", "Study", "Health"]'),
+            waterCups: parseInt(localStorage.getItem('easy_life_water') || '0'),
+            activeTab: 'studio',
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear(),
+            customAudioDataUrl: localStorage.getItem('easy_life_custom_audio') || '',
+            dtPickerDate: new Date(),
+            dtPickerAmPm: 'AM',
+            currentAlarmEvent: null,
+            pendingDeleteId: null
+        };
+
+        // --- Audio Synthesizer Engine ---
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playAlarmSound(type) {
+            if (type === 'custom' && appState.customAudioDataUrl) {
+                const player = document.getElementById('custom-audio-player');
+                player.src = appState.customAudioDataUrl;
+                player.play().catch(e => console.log("Custom audio play prevented:", e));
+                return;
+            }
+
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                const now = ctx.currentTime;
+                if (type === 'radar') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(880, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'chime') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.15); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.3); // G5
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
+                } else if (type === 'siren') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(900, now + 0.3);
+                    osc.frequency.linearRampToValueAtTime(300, now + 0.6);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+                    osc.start(now);
+                    osc.stop(now + 0.7);
+                } else {
+                    // Digital beep
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch (e) {
+                console.log("Audio synth error:", e);
+            }
+        }
+
+        function playTestAudio() {
+            const soundType = document.getElementById('modal-input-sound')?.value || 'digital';
+            playAlarmSound(soundType);
+        }
+
+        function handleCustomAudioUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                appState.customAudioDataUrl = e.target.result;
+                localStorage.setItem('easy_life_custom_audio', appState.customAudioDataUrl);
+                document.getElementById('modal-input-sound').value = 'custom';
+                playAlarmSound('custom');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Initialization & Splash Flow ---
+        window.onload = function() {
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 25;
+                const bar = document.getElementById('splash-progress');
+                if (bar) bar.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    setTimeout(() => {
+                        const splash = document.getElementById('splash-screen');
+                        if (splash) {
+                            splash.style.opacity = '0';
+                            setTimeout(() => splash.remove(), 500);
+                        }
+                        if (!appState.userName) {
+                            openModalElement('setup-name-modal');
+                        }
+                    }, 300);
+                }
+            }, 100);
+
+            // Apply theme
+            if (appState.darkMode) {
+                document.documentElement.classList.add('dark');
+                const icon = document.getElementById('dark-mode-icon');
+                if (icon) icon.setAttribute('data-lucide', 'sun');
+            }
+
+            updateUserNameDisplay();
+            renderAll();
+            lucide.createIcons();
+
+            // Start clock & alarm ticker
+            setInterval(secondTickLoop, 1000);
+            secondTickLoop();
+        };
+
+        function saveUserNameAndStart() {
+            const input = document.getElementById('setup-user-name-input').value.trim();
+            if (!input) return;
+            appState.userName = input;
+            localStorage.setItem('easy_life_user_name', appState.userName);
+            closeModalElement('setup-name-modal');
+            updateUserNameDisplay();
+        }
+
+        function updateUserNameDisplay() {
+            const titleEl = document.getElementById('header-user-title');
+            if (titleEl && appState.userName) {
+                titleEl.textContent = `${appState.userName}'s EaSy LiFe Studio`;
+            }
+        }
+
+        function toggleDarkMode() {
+            appState.darkMode = !appState.darkMode;
+            localStorage.setItem('easy_life_dark', appState.darkMode);
+
+            const overlay = document.getElementById('theme-dissolve-overlay');
+            if (overlay) {
+                overlay.style.opacity = '1';
+                setTimeout(() => {
+                    if (appState.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                    setTimeout(() => {
+                        overlay.style.opacity = '0';
+                    }, 100);
+                }, 300);
+            }
+            lucide.createIcons();
+        }
+
+        function secondTickLoop() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            
+            const liveDate = document.getElementById('header-live-date');
+            if (liveDate) liveDate.textContent = `${dateStr} • ${timeStr}`;
+
+            const sideClock = document.getElementById('sidebar-live-clock');
+            if (sideClock) sideClock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            checkAlarms(now);
+        }
+
+        // --- Alarm Checker Engine ---
+        function checkAlarms(now) {
+            if (appState.currentAlarmEvent) return; // already ringing
+
+            const currentTimeStr = now.toTimeString().slice(0, 5); // HH:MM
+            const currentDateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+            appState.tasks.forEach(task => {
+                if (task.alarmActive && !task.completed && task.datetime) {
+                    const taskDate = task.datetime.slice(0, 10);
+                    const taskTime = task.datetime.slice(11, 16);
+                    if (taskDate === currentDateStr && taskTime === currentTimeStr) {
+                        triggerAlarmOverlay(task);
+                    }
+                }
+            });
+        }
+
+        function triggerAlarmOverlay(task) {
+            appState.currentAlarmEvent = task;
+            const overlay = document.getElementById('app-alarm-overlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            document.getElementById('alarm-overlay-title').textContent = task.title;
+            document.getElementById('alarm-overlay-time').textContent = task.datetime.replace('T', ' ');
+            
+            const n1 = Math.floor(Math.random() * 8) + 2;
+            const n2 = Math.floor(Math.random() * 8) + 2;
+            window.activeAlarmMathSolution = n1 + n2;
+            document.getElementById('alarm-math-question').textContent = `${n1} + ${n2} = ?`;
+            document.getElementById('alarm-math-answer').value = '';
+
+            playAlarmSound(task.sound || 'digital');
+            window.alarmAudioInterval = setInterval(() => {
+                playAlarmSound(task.sound || 'digital');
+            }, 3000);
+        }
+
+        function verifyAlarmMath() {
+            const ans = parseInt(document.getElementById('alarm-math-answer').value);
+            if (ans === window.activeAlarmMathSolution) {
+                dismissCurrentAlarm();
+            } else {
+                alert('Incorrect math answer! Try again.');
+            }
+        }
+
+        function dismissCurrentAlarm() {
+            clearInterval(window.alarmAudioInterval);
+            const overlay = document.getElementById('app-alarm-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+            if (appState.currentAlarmEvent) {
+                appState.currentAlarmEvent.alarmActive = false;
+                saveState();
+            }
+            appState.currentAlarmEvent = null;
+        }
+
+        function snoozeCurrentAlarm() {
+            clearInterval(window.alarmAudioInterval);
+            const overlay = document.getElementById('app-alarm-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+            appState.currentAlarmEvent = null;
+        }
+
+        // --- Navigation Tabs ---
+        function switchTab(tabId) {
+            appState.activeTab = tabId;
+            const tabs = ['studio', 'calendar', 'sleep', 'water', 'analytics'];
+            tabs.forEach(t => {
+                const content = document.getElementById(`tab-content-${t}`);
+                if (content) {
+                    if (t === tabId) content.classList.remove('hidden');
+                    else content.classList.add('hidden');
+                }
+                const navBtn = document.getElementById(`nav-btn-${t}`);
+                if (navBtn) {
+                    if (t === tabId) {
+                        navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold bg-google-blue text-white shadow-lg shadow-google-blue/30 transition";
+                    } else {
+                        navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition";
+                    }
+                }
+                const mobileNav = document.getElementById(`mobile-nav-${t}`);
+                if (mobileNav) {
+                    if (t === tabId) {
+                        mobileNav.className = "flex flex-col items-center justify-center space-y-1 text-google-blue";
+                    } else {
+                        mobileNav.className = "flex flex-col items-center justify-center space-y-1 text-slate-400";
+                    }
+                }
+            });
+            renderAll();
+        }
+
+        // --- State Persistence & Rendering ---
+        function saveState() {
+            localStorage.setItem('easy_life_tasks', JSON.stringify(appState.tasks));
+            localStorage.setItem('easy_life_categories', JSON.stringify(appState.categories));
+            localStorage.setItem('easy_life_water', appState.waterCups);
+            renderAll();
+        }
+
+        function renderAll() {
+            renderDashboardMetrics();
+            renderTodaysAssignments();
+            renderCategories();
+            renderMonthCalendar();
+            renderWaterTracker();
+            renderAnalyticsChart();
+            lucide.createIcons();
+        }
+
+        function renderDashboardMetrics() {
+            document.getElementById('metric-total-tasks').textContent = appState.tasks.length;
+            const activeAlarms = appState.tasks.filter(t => t.alarmActive && !t.completed).length;
+            document.getElementById('metric-active-alarms').textContent = activeAlarms;
+            document.getElementById('metric-water-cups').textContent = `${appState.waterCups} / 8`;
+        }
+
+        function renderTodaysAssignments() {
+            const container = document.getElementById('todays-task-list');
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const todaysTasks = appState.tasks.filter(t => t.datetime && t.datetime.slice(0, 10) === todayStr);
+
+            document.getElementById('todays-badge-count').textContent = `${todaysTasks.length} items`;
+
+            if (todaysTasks.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 dark:text-slate-500 text-xs">No tasks scheduled for today. Click "New Task / Alarm" above to add one!</div>`;
+                document.getElementById('todays-completion-stats').textContent = `Completed 0 of 0 tasks`;
+                document.getElementById('todays-progress-bar').style.width = '0%';
+                return;
+            }
+
+            const completedCount = todaysTasks.filter(t => t.completed).length;
+            const pct = Math.round((completedCount / todaysTasks.length) * 100);
+            document.getElementById('todays-completion-stats').textContent = `Completed ${completedCount} of ${todaysTasks.length} tasks`;
+            document.getElementById('todays-progress-bar').style.width = `${pct}%`;
+
+            container.innerHTML = todaysTasks.map(t => {
+                const priorityClass = t.priority === 'high' ? 'priority-high badge-high' : t.priority === 'med' ? 'priority-med badge-med' : 'priority-low badge-low';
+                return `
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-google-darkBg border border-slate-200 dark:border-google-darkBorder flex items-center justify-between ${priorityClass} interactive-btn">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTaskComplete('${t.id}')" class="w-4 h-4 rounded text-google-blue focus:ring-google-blue cursor-pointer">
+                            <div>
+                                <h4 class="text-xs font-bold ${t.completed ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}">${t.title}</h4>
+                                <span class="text-[10px] text-slate-400">${t.category} • ${t.datetime.slice(11, 16)} ${t.alarmActive ? '🔔 Alarm On' : ''}</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="openEditEventModal('${t.id}')" class="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="promptDeleteTask('${t.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('category-pills-container');
+            const selectEl = document.getElementById('modal-input-category');
+            
+            if (selectEl) {
+                const currentVal = selectEl.value;
+                selectEl.innerHTML = appState.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                selectEl.value = currentVal || appState.categories[0];
+            }
+
+            if (container) {
+                container.innerHTML = appState.categories.map(c => `
+                    <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-google-darkBorder">${c}</span>
+                `).join('');
+            }
+        }
+
+        function addNewCategory() {
+            const input = document.getElementById('new-category-input');
+            const val = input.value.trim();
+            if (!val || appState.categories.includes(val)) return;
+            appState.categories.push(val);
+            input.value = '';
+            saveState();
+        }
+
+        function toggleTaskComplete(id) {
+            const task = appState.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveState();
+            }
+        }
+
+        function promptDeleteTask(id) {
+            appState.pendingDeleteId = id;
+            document.getElementById('confirm-modal-title').textContent = 'Delete Task?';
+            document.getElementById('confirm-modal-desc').textContent = 'Are you sure you want to delete this task? This cannot be undone.';
+            document.getElementById('confirm-modal-action-btn').setAttribute('onclick', 'executeDeleteTask()');
+            openModalElement('confirm-modal-overlay');
+        }
+
+        function confirmDeleteTaskFromModal() {
+            const id = document.getElementById('modal-task-id').value;
+            if (!id) return;
+            closeTaskModal();
+            promptDeleteTask(id);
+        }
+
+        function executeDeleteTask() {
+            if (appState.pendingDeleteId) {
+                appState.tasks = appState.tasks.filter(t => t.id !== appState.pendingDeleteId);
+                appState.pendingDeleteId = null;
+                saveState();
+            }
+            closeConfirmModal();
+        }
+
+        function closeConfirmModal() {
+            closeModalElement('confirm-modal-overlay');
+        }
+
+        // --- Month Calendar Logic ---
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        function renderMonthCalendar() {
+            const titleEl = document.getElementById('calendar-month-year-title');
+            if (titleEl) titleEl.textContent = `${monthNames[appState.currentMonth]} ${appState.currentYear}`;
+
+            const grid = document.getElementById('month-grid-container');
+            if (!grid) return;
+
+            const firstDayIndex = new Date(appState.currentYear, appState.currentMonth, 1).getDay();
+            const adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1; // Mon start
+            const daysInMonth = new Date(appState.currentYear, appState.currentMonth + 1, 0).getDate();
+
+            let html = '';
+            for (let i = 0; i < adjustedFirstDay; i++) {
+                html += `<div class="h-24 bg-slate-100/40 dark:bg-slate-900/40 rounded-2xl opacity-40"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${appState.currentYear}-${String(appState.currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayTasks = appState.tasks.filter(t => t.datetime && t.datetime.slice(0, 10) === dateStr);
+                
+                html += `
+                    <div class="month-day-cell h-24 bg-white dark:bg-google-darkCard p-2 rounded-2xl border border-slate-200 dark:border-google-darkBorder flex flex-col justify-between overflow-hidden cursor-pointer" onclick="openAddEventModalForDate('${dateStr}')">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-700 dark:text-slate-300">${d}</span>
+                            ${dayTasks.length ? `<span class="w-2 h-2 rounded-full bg-google-blue"></span>` : ''}
+                        </div>
+                        <div class="space-y-1 overflow-y-auto max-h-14">
+                            ${dayTasks.map(t => `<div class="badge-item text-[9px] font-bold px-1.5 py-0.5 rounded truncate ${t.priority === 'high' ? 'badge-high' : t.priority === 'med' ? 'badge-med' : 'badge-low'}">${t.title}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        function changeMonth(delta) {
+            appState.currentMonth += delta;
+            if (appState.currentMonth > 11) {
+                appState.currentMonth = 0;
+                appState.currentYear++;
+            } else if (appState.currentMonth < 0) {
+                appState.currentMonth = 11;
+                appState.currentYear--;
+            }
+            renderMonthCalendar();
+        }
+
+        function jumpToCurrentMonth() {
+            appState.currentMonth = new Date().getMonth();
+            appState.currentYear = new Date().getFullYear();
+            renderMonthCalendar();
+        }
+
+        // --- Sleep Lab Logic ---
+        function calculateSleepCycles() {
+            const timeVal = document.getElementById('sleep-target-wakeup').value || '07:00';
+            const [h, m] = timeVal.split(':').map(Number);
+            const wakeDate = new Date();
+            wakeDate.setHours(h, m, 0, 0);
+
+            const resultsDiv = document.getElementById('sleep-cycles-results');
+            let html = `<p class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Recommended Bedtimes for ${timeVal}:</p>`;
+            
+            [6, 5, 4].forEach(cycles => {
+                const bedTime = new Date(wakeDate.getTime() - (cycles * 90 * 60 * 1000) - (15 * 60 * 1000));
+                const timeString = bedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                html += `<div class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-google-darkCard border border-slate-200 dark:border-google-darkBorder"><span class="font-bold">${cycles} Cycles (${cycles * 1.5} hrs rest)</span><span class="font-mono text-purple-500 font-bold">${timeString}</span></div>`;
+            });
+            resultsDiv.innerHTML = html;
+        }
+
+        // --- Water Tracker Logic ---
+        function renderWaterTracker() {
+            const container = document.getElementById('water-glasses-grid');
+            if (!container) return;
+
+            let html = '';
+            for (let i = 1; i <= 8; i++) {
+                const filled = i <= appState.waterCups;
+                html += `
+                    <button onclick="toggleWaterCup(${i})" class="w-14 h-20 rounded-2xl border-2 ${filled ? 'bg-cyan-500/20 border-cyan-500 text-cyan-500' : 'bg-slate-50 dark:bg-google-darkBg border-slate-300 dark:border-slate-700 text-slate-400'} flex flex-col items-center justify-center space-y-1 interactive-btn shadow-sm">
+                        <i data-lucide="droplet" class="w-6 h-6 ${filled ? 'fill-cyan-500' : ''}"></i>
+                        <span class="text-[10px] font-bold">Cup ${i}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function toggleWaterCup(cupIndex) {
+            if (appState.waterCups === cupIndex) {
+                appState.waterCups = cupIndex - 1;
+            } else {
+                appState.waterCups = cupIndex;
+            }
+            saveState();
+        }
+
+        function resetWaterTracker() {
+            appState.waterCups = 0;
+            saveState();
+        }
+
+        // --- Analytics Chart ---
+        let analyticsChartInstance = null;
+        function renderAnalyticsChart() {
+            const ctx = document.getElementById('analyticsChart')?.getContext('2d');
+            if (!ctx) return;
+
+            if (analyticsChartInstance) analyticsChartInstance.destroy();
+
+            analyticsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Completed Tasks',
+                        data: [4, 6, 5, 8, 7, 3, 5],
+                        backgroundColor: '#1a73e8',
+                        borderRadius: 8
+                    }, {
+                        label: 'Water Intake (Cups)',
+                        data: [8, 7, 8, 6, 8, 5, 7],
+                        backgroundColor: '#34a853',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { font: { size: 10 } } } }
+                }
+            });
+        }
+
+        // --- Task Modal & DateTime Picker Logic ---
+        function openAddEventModal() {
+            document.getElementById('modal-task-title').textContent = 'New Task & Alarm';
+            document.getElementById('modal-task-id').value = '';
+            document.getElementById('modal-input-title').value = '';
+            document.getElementById('modal-input-alarm-active').checked = true;
+            document.getElementById('modal-delete-btn').classList.add('hidden');
+            
+            const now = new Date();
+            appState.dtPickerDate = now;
+            
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('modal-input-datetime').value = `${year}-${month}-${day}T${hours}:${mins}`;
+            updateDateTimeDisplayLabel();
+            openModalElement('task-modal-overlay');
+        }
+
+        function openAddEventModalForDate(dateStr) {
+            openAddEventModal();
+            const d = new Date(dateStr + 'T12:00:00');
+            appState.dtPickerDate = d;
+            
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            
+            document.getElementById('modal-input-datetime').value = `${year}-${month}-${day}T12:00`;
+            updateDateTimeDisplayLabel();
+        }
+
+        function openEditEventModal(id) {
+            const task = appState.tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('modal-task-title').textContent = 'Edit Task & Alarm';
+            document.getElementById('modal-task-id').value = task.id;
+            document.getElementById('modal-input-title').value = task.title;
+            document.getElementById('modal-input-category').value = task.category;
+            document.getElementById('modal-input-priority').value = task.priority || 'med';
+            document.getElementById('modal-input-sound').value = task.sound || 'digital';
+            document.getElementById('modal-input-alarm-active').checked = task.alarmActive;
+            document.getElementById('modal-input-datetime').value = task.datetime;
+            
+            appState.dtPickerDate = new Date(task.datetime);
+            updateDateTimeDisplayLabel();
+            
+            document.getElementById('modal-delete-btn').classList.remove('hidden');
+            openModalElement('task-modal-overlay');
+        }
+
+        function closeTaskModal() {
+            closeModalElement('task-modal-overlay');
+        }
+
+        function saveTaskFromModal() {
+            const id = document.getElementById('modal-task-id').value;
+            const title = document.getElementById('modal-input-title').value.trim();
+            const category = document.getElementById('modal-input-category').value;
+            const priority = document.getElementById('modal-input-priority').value;
+            const sound = document.getElementById('modal-input-sound').value;
+            const alarmActive = document.getElementById('modal-input-alarm-active').checked;
+            const datetime = document.getElementById('modal-input-datetime').value;
+
+            if (!title) {
+                alert('Please enter a task title.');
+                return;
+            }
+            if (!datetime) {
+                alert('Please select a valid date and time.');
+                return;
+            }
+
+            if (id) {
+                const task = appState.tasks.find(t => t.id === id);
+                if (task) {
+                    task.title = title;
+                    task.category = category;
+                    task.priority = priority;
+                    task.sound = sound;
+                    task.alarmActive = alarmActive;
+                    task.datetime = datetime;
+                }
+            } else {
+                const newTask = {
+                    id: 'task_' + Date.now(),
+                    title,
+                    category,
+                    priority,
+                    sound,
+                    alarmActive,
+                    datetime,
+                    completed: false
+                };
+                appState.tasks.push(newTask);
+            }
+
+            saveState();
+            closeTaskModal();
+        }
+
+        // --- Dual-Pane DateTime Picker implementation ---
+        function openDateTimePicker() {
+            dtPickerMonth = appState.dtPickerDate.getMonth();
+            dtPickerYear = appState.dtPickerDate.getFullYear();
+            openModalElement('datetime-picker-modal');
+            renderDtPickerDays();
+        }
+
+        function closeDateTimePicker() {
+            closeModalElement('datetime-picker-modal');
+        }
+
+        let dtPickerMonth = new Date().getMonth();
+        let dtPickerYear = new Date().getFullYear();
+
+        function renderDtPickerDays() {
+            const titleEl = document.getElementById('dt-picker-month-year');
+            if (titleEl) titleEl.textContent = `${monthNames[dtPickerMonth]} ${dtPickerYear}`;
+
+            const grid = document.getElementById('dt-picker-days-grid');
+            if (!grid) return;
+
+            const firstDayIndex = new Date(dtPickerYear, dtPickerMonth, 1).getDay();
+            const adjustedFirstDay = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+            const daysInMonth = new Date(dtPickerYear, dtPickerMonth + 1, 0).getDate();
+
+            let html = '';
+            for (let i = 0; i < adjustedFirstDay; i++) {
+                html += `<div></div>`;
+            }
+
+            const selectedD = appState.dtPickerDate.getDate();
+            const selectedM = appState.dtPickerDate.getMonth();
+            const selectedY = appState.dtPickerDate.getFullYear();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isSelected = (d === selectedD && dtPickerMonth === selectedM && dtPickerYear === selectedY);
+                html += `
+                    <button onclick="selectDtPickerDay(${d})" class="w-8 h-8 rounded-xl font-bold flex items-center justify-center transition ${isSelected ? 'bg-google-blue text-white shadow-md' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'}">${d}</button>
+                `;
+            }
+            grid.innerHTML = html;
+
+            let h = appState.dtPickerDate.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            document.getElementById('dt-input-hour').value = h;
+            document.getElementById('dt-input-minute').value = String(appState.dtPickerDate.getMinutes()).padStart(2, '0');
+            setAmPm(ampm);
+        }
+
+        function dtPickerChangeMonth(delta) {
+            dtPickerMonth += delta;
+            if (dtPickerMonth > 11) {
+                dtPickerMonth = 0;
+                dtPickerYear++;
+            } else if (dtPickerMonth < 0) {
+                dtPickerMonth = 11;
+                dtPickerYear--;
+            }
+            renderDtPickerDays();
+        }
+
+        function selectDtPickerDay(day) {
+            appState.dtPickerDate.setFullYear(dtPickerYear, dtPickerMonth, day);
+            renderDtPickerDays();
+        }
+
+        function setAmPm(ampm) {
+            appState.dtPickerAmPm = ampm;
+            const amBtn = document.getElementById('dt-ampm-am');
+            const pmBtn = document.getElementById('dt-ampm-pm');
+            if (ampm === 'AM') {
+                amBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-google-blue text-white";
+                pmBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300";
+            } else {
+                pmBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-google-blue text-white";
+                amBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300";
+            }
+        }
+
+        function confirmDateTimePicker() {
+            let h = parseInt(document.getElementById('dt-input-hour').value) || 12;
+            const m = parseInt(document.getElementById('dt-input-minute').value) || 0;
+            
+            if (appState.dtPickerAmPm === 'PM' && h < 12) h += 12;
+            if (appState.dtPickerAmPm === 'AM' && h === 12) h = 0;
+
+            appState.dtPickerDate.setHours(h, m, 0, 0);
+
+            const year = appState.dtPickerDate.getFullYear();
+            const month = String(appState.dtPickerDate.getMonth() + 1).padStart(2, '0');
+            const day = String(appState.dtPickerDate.getDate()).padStart(2, '0');
+            const hours = String(appState.dtPickerDate.getHours()).padStart(2, '0');
+            const mins = String(appState.dtPickerDate.getMinutes()).padStart(2, '0');
+
+            const formattedISO = `${year}-${month}-${day}T${hours}:${mins}`;
+            document.getElementById('modal-input-datetime').value = formattedISO;
+            updateDateTimeDisplayLabel();
+            closeDateTimePicker();
+        }
+
+        function updateDateTimeDisplayLabel() {
+            const dtVal = document.getElementById('modal-input-datetime').value;
+            const label = document.getElementById('datetime-display-label');
+            if (dtVal && label) {
+                const d = new Date(dtVal);
+                label.textContent = d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } else if (label) {
+                label.textContent = 'Select Date & Time...';
+            }
+        }
+
+        // --- macOS Modal Helper Functions ---
+        function openModalElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.classList.remove('mac-modal-closed');
+                el.classList.add('mac-modal-open');
+            }
+        }
+
+        function closeModalElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.classList.remove('mac-modal-open');
+                el.classList.add('mac-modal-closed');
+            }
+        }
+    </script>
+</body>
+</html>
