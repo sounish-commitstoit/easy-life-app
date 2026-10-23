@@ -1,0 +1,16 @@
+{
+  "short_name": "EaSy LiFe",
+  "name": "EaSy LiFe Studio",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f552.png",
+      "type": "image/png",
+      "sizes": "72x72 192x192 512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#121316",
+  "theme_color": "#1a73e8",
+  "display": "standalone",
+  "orientation": "portrait"
+}
