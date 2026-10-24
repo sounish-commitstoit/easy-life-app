@@ -1,12 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
-</script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -152,6 +147,12 @@
             transition: opacity 0.5s ease;
         }
     </style>
+    <link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
 </head>
 <body class="h-full bg-slate-50 dark:bg-google-darkBg text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-300 pb-16 md:pb-0 select-none">
 
